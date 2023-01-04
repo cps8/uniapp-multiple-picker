@@ -1,5 +1,4 @@
 import App from './App'
-import uniNavBar from '/components/uni-nav-bar/uni-nav-bar.vue'
 import multiplePicker from '/components/multiple-picker/multiple-picker.vue'
 
 // #ifndef VUE3
