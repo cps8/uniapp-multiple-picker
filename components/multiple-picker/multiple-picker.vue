@@ -15,20 +15,19 @@
                 <view class="button">
                     <text @tap.stop="cancel">取消</text>
                     <text>{{ title }}</text>
-                    <text @tap.stop="confrim">确定</text>
+                    <text @tap.stop="confrim" :style="okColor ? 'color:' + okColor : ''">确定</text>
                 </view>
                 <div class="option">
-                    <view class="checked-all item" v-show="checkedAll" @tap.stop="onCheckedAll"
-                        :class="[isCheckedAll ? 'checked' : '']">
-                        全选
-                        <icon v-show="isCheckedAll" type="success_no_circle" class="icon" size="16" />
+                    <view class="checked-all item" v-show="multiple && checkedAll" @tap.stop="onCheckedAll" :class="[isCheckedAll ? 'checked' : '']">
+                        <text :style="[(color && isCheckedAll) ? 'color:' + color : '']">全选</text>
+                        <icon v-show="isCheckedAll" type="success_no_circle" class="icon" size="16" :color="color ? color : ''" />
                     </view>
                     <checkbox-group>
                         <view class="item" v-for="(item, index) in list" :class="[item.selected ? 'checked' : '']"
                             @tap.stop="onChange(item, index)" :disabled="item.disabled">
-                            {{ item.text }}
+                            <text :style="[(color && item.selected) ? 'color:' + color : '']">{{ item.text }}</text>
                             <icon v-show="item.selected" class="icon" type="success_no_circle" size="16"
-                                :color="item.disabled ? 'grey' : '#2D8DFF'" />
+                                :color="item.disabled ? 'grey' : color ? color : ''" />
                         </view>
                     </checkbox-group>
                 </div>
@@ -67,6 +66,18 @@ export default {
         checkedAll: {// 是否启用全选功能
             type: Boolean,
             default: true
+        },
+        multiple: { // 是否启用多选模式
+            type: Boolean,
+            default: true
+        },
+        okColor: {  // 确定 按钮颜色
+            stype: String,
+            default: ""
+        },
+        color: {    // 选中项颜色
+            type: String,
+            default: ""
         }
     },
     data() {
@@ -95,7 +106,7 @@ export default {
             if (!val)
                 return;
             let codes = val.split(",");
-            this.selectedValues = Object.assign([], codes);
+            this.selectedValues = this.multiple ? Object.assign([], codes) : [val];
             this.openMultiple();
         }
     },
@@ -127,7 +138,16 @@ export default {
         onChange(item, i) {
             if (item.disabled)
                 return;
+
             this.list[i].selected = !this.list[i].selected;
+            if (this.multiple) {
+                if (this.selectedIndex.indexOf(i) === -1)
+                    this.selectedIndex.push(i);
+            } else {
+                if (this.selectedIndex.length > 0 && this.selectedIndex[0] != i)
+                    this.list[this.selectedIndex[0]].selected = false;
+                this.selectedIndex = [i];
+            }
             if (this.isCheckedAll && !this.list[i].selected) {
                 this.isCheckedAll = false;
             } else {
@@ -153,6 +173,7 @@ export default {
          * @param {Object} event 
          */
         cancel(event) {
+            this.isShow = false;
             if (!this.list || this.list.length == 0)
                 return;
             this.list.forEach((item, i) => {
@@ -162,7 +183,6 @@ export default {
                     this.$set(item, "selected", false);
                 }
             })
-            this.isShow = false;
             this.$emit("cancel", event);
         },
         /**
@@ -170,6 +190,7 @@ export default {
          * @param {Object} event 
          */
         confrim(event) {
+            this.isShow = false;
             if (!this.list && this.list.length > 0)
                 return;
             this.selectedValues = [];
@@ -198,7 +219,6 @@ export default {
                 indnexs: this.selectedIndex,
                 selected: selected
             };
-            this.isShow = false;
             this.$emit("confrim", event);
         },
         /**
@@ -293,6 +313,13 @@ export default {
                 margin-top: auto;
                 box-sizing: border-box;
 
+                .checked-all {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                }
+
                 .item {
                     position: relative;
                     border-bottom: 1rpx solid #CCCCCC;
@@ -305,7 +332,7 @@ export default {
                         position: absolute;
                         top: 50%;
                         right: 10rpx;
-                        transform: translateY(-50%);
+                        transform: translateY(-30%);
                     }
 
                     &.checked {
