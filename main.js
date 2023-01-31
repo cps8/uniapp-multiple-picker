@@ -1,13 +1,12 @@
 import App from './App'
-import multiplePicker from '/components/multiple-picker/multiple-picker.vue'
+import multiplePicker from '/components/uni-multiple-picker/uni-multiple-picker.vue'
 
 // #ifndef VUE3
 import Vue from 'vue'
 Vue.config.productionTip = false
 App.mpType = 'app'
 
-Vue.component('uni-nav-bar', uniNavBar);
-Vue.component('multiple-picker', multiplePicker);
+Vue.component('uni-multiple-picker', multiplePicker);
 
 const app = new Vue({
     ...App

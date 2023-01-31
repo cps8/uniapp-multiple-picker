@@ -1,6 +1,6 @@
 <template>
 	<view style="position: relative;">
-		<multiple-picker :title="title" :items="items" :disabled="disabled" :show="show" :values="value" color="#ff0000" okColor="#ff3333"
+		<uni-multiple-picker :title="title" :items="items" :disabled="disabled" :show="show" :values="value" color="#ff0000" okColor="#ff3333"
 			:multiple="false" @confrim="onConfrim" />
 	</view>
 </template>

@@ -1,5 +1,5 @@
 <template>
-    <view class="multi-picker">
+    <view class="multi-picker" :style="[pickerWidth,style]">
         <view class="form">
             <view class="item">
                 <!-- 下拉框多选 -->
@@ -9,86 +9,93 @@
                 </view>
             </view>
         </view>
-
-        <view class="cover" v-show="!disabled && isShow">
+        <!-- 窄屏选择项 -->
+        <view v-if="!isWideScreen" class="cover" v-show="!disabled && isShow">
             <view class="panel">
                 <view class="button">
                     <text @tap.stop="cancel">取消</text>
                     <text>{{ title }}</text>
                     <text @tap.stop="confrim" :style="okColor ? 'color:' + okColor : ''">确定</text>
                 </view>
-                <div class="option">
-                    <view class="checked-all item" v-show="multiple && checkedAll" @tap.stop="onCheckedAll" :class="[isCheckedAll ? 'checked' : '']">
-                        <text :style="[(color && isCheckedAll) ? 'color:' + color : '']">全选</text>
-                        <icon v-show="isCheckedAll" type="success_no_circle" class="icon" size="16" :color="color ? color : ''" />
-                    </view>
-                    <checkbox-group>
-                        <view class="item" v-for="(item, index) in list" :class="[item.selected ? 'checked' : '']"
-                            @tap.stop="onChange(item, index)" :disabled="item.disabled">
-                            <text :style="[(color && item.selected) ? 'color:' + color : '']">{{ item.text }}</text>
-                            <icon v-show="item.selected" class="icon" type="success_no_circle" size="16"
-                                :color="item.disabled ? 'grey' : color ? color : ''" />
-                        </view>
-                    </checkbox-group>
-                </div>
+                <uni-multiple-picker-option :items="items" :values="values"
+                    :checkedAll="checkedAll" :multiple="multiple" :color="color" height="500rpx" @onChange="onChange"/>
             </view>
+        </view>
+
+        <!-- 宽屏选择项 -->
+        <view v-if="isWideScreen" class="ws-options" v-show="!disabled && isShow">
+            <uni-multiple-picker-option :items="items" :values="values"
+                    :checkedAll="checkedAll" :multiple="multiple" :color="color" @onChange="onChange"/>
         </view>
     </view>
 </template>
 
 <script>
+import uniMultiplePickerOption from './uni-multiple-picker-option.vue';
+
 export default {
+    components: { uniMultiplePickerOption },
     props: {
-        items: {    // 多选列表初始值
+        items: {
             type: Array,
             default: () => []
         },
-        show: {     // 多选列表是否显示
+        show: {
             type: Boolean,
             default: false
         },
-        disabled: { // 组件是否可用
+        disabled: {
             type: Boolean,
             default: false
         },
-        values: {   // 组件默认选中code集合
+        values: {
             type: String,
             default: ""
         },
-        text: {     // 组件默认选中显示文本
+        title: {
             type: String,
             default: ""
         },
-        title: {    // 组件选择器标题
-            type: String,
-            default: ""
-        },
-        checkedAll: {// 是否启用全选功能
+        checkedAll: {
             type: Boolean,
             default: true
         },
-        multiple: { // 是否启用多选模式
+        multiple: {
             type: Boolean,
             default: true
         },
-        okColor: {  // 确定 按钮颜色
+        okColor: {
             stype: String,
             default: ""
         },
-        color: {    // 选中项颜色
+        color: {
+            type: String,
+            default: ""
+        },
+        width: {
+            type: [Number, String],
+            default: "100%"
+        },
+        wideScreen: {
+            type: [Number, String],
+            default: -1
+        },
+        style: {
             type: String,
             default: ""
         }
     },
     data() {
         return {
-            selectedTexts: "",      // 已选集合文本
-            selectedValues: [],     // 已选集合code
-            selectedIndex: [],      // 已选集合下标
-            list: [],               // 全量选项集合
-            isShow: this.show,      // 组件是否显示
-            isCheckedAll: false     // 是否已全选
-        }
+            pickerWidth: "",
+            selectedTexts: "",
+            selectedValues: [],
+            selectedIndex: [],
+            list: [],
+            isShow: this.show,
+            isCheckedAll: false,
+            isWideScreen: false // 是否为宽屏
+        };
     },
     watch: {
         show: {
@@ -97,17 +104,26 @@ export default {
             },
             immediate: true
         },
-        checkedAll(val) {
-            if (!val)
-                val = false;
-            this.onCheckedAll();
+        wideScreen: {
+            handler(newVal, oldVal) {
+                const _this = this;
+                const width = window.innerWidth;
+                if (newVal == -1)
+                    return;
+                _this.isWideScreen = newVal < width;
+            },
+            immediate: true
         },
-        values(val) {
-            if (!val)
-                return;
-            let codes = val.split(",");
-            this.selectedValues = this.multiple ? Object.assign([], codes) : [val];
-            this.openMultiple();
+        width: {
+            handler(newVal, oldVal) {
+                const _this = this;
+                _this.pickerWidth = "--width: ";
+                if (Object.prototype.toString.call(newVal) === "[object Number]" || /\d$/.test(newVal))
+                    _this.pickerWidth += newVal + "rpx";
+                else
+                    _this.pickerWidth += newVal;
+            },
+            immediate: true
         }
     },
     methods: {
@@ -131,46 +147,15 @@ export default {
             this.list = Object.assign([], this.items);
         },
         /**
-         * 改变选项选中状态事件
-         * @param {Object} item 
-         * @param {Number} i 
+         * 选项变化监听事件
+         * @param {Object} args 包含改变项item 和下标i 的对象
          */
-        onChange(item, i) {
-            if (item.disabled)
-                return;
-
-            this.list[i].selected = !this.list[i].selected;
-            if (this.multiple) {
-                if (this.selectedIndex.indexOf(i) === -1)
-                    this.selectedIndex.push(i);
-            } else {
-                if (this.selectedIndex.length > 0 && this.selectedIndex[0] != i)
-                    this.list[this.selectedIndex[0]].selected = false;
-                this.selectedIndex = [i];
-            }
-            if (this.isCheckedAll && !this.list[i].selected) {
-                this.isCheckedAll = false;
-            } else {
-                let isCheckedAll = this.isCheckedAll;
-                try {
-                    this.isCheckedAll = true;
-                    for (let j = 0; j < this.list.length; j++) {
-                        if (!this.list[j].selected) {
-                            this.isCheckedAll = false;
-                            break;
-                        }
-                    }
-                } catch (e) {
-                    this.isCheckedAll = isCheckedAll;
-                    console.error(e);
-                }
-
-            }
-            this.$emit("onChange", { item: item, i: i });
+        onChange(args) {
+            this.$emit("onChange", args);
         },
         /**
          * 取消事件
-         * @param {Object} event 
+         * @param {Object} event
          */
         cancel(event) {
             this.isShow = false;
@@ -179,15 +164,16 @@ export default {
             this.list.forEach((item, i) => {
                 if (this.selectedIndex.indexOf(i) > -1) {
                     this.$set(item, "selected", true);
-                } else {
+                }
+                else {
                     this.$set(item, "selected", false);
                 }
-            })
+            });
             this.$emit("cancel", event);
         },
         /**
          * 确定事件
-         * @param {Object} event 
+         * @param {Object} event
          */
         confrim(event) {
             this.isShow = false;
@@ -221,17 +207,6 @@ export default {
             };
             this.$emit("confrim", event);
         },
-        /**
-         * 全选事件
-         */
-        onCheckedAll() {
-            for (let i = 0; i < this.list.length; i++) {
-                if (this.list[i].disabled)
-                    continue;
-                this.list[i].selected = !this.isCheckedAll;
-            }
-            this.isCheckedAll = !this.isCheckedAll;
-        }
     }
 }
 </script>
@@ -239,7 +214,7 @@ export default {
 <style scoped lang="scss">
 .multi-picker {
     position: relative;
-
+    width: var(--width);
     .form {
         width: 100%;
         box-sizing: border-box;
@@ -275,7 +250,7 @@ export default {
         .panel {
             width: 100%;
             height: 600rpx;
-            position: fixed;
+            position: absolute;
             background-color: rgba(255, 255, 255, 1);
             bottom: 0;
             left: 0;
@@ -302,46 +277,21 @@ export default {
                     float: right;
                 }
             }
-
-            .option {
-                width: 100%;
-                height: 500rpx;
-                overflow-y: scroll;
-                padding-left: 20rpx;
-                padding-right: 20rpx;
-                margin-bottom: auto;
-                margin-top: auto;
-                box-sizing: border-box;
-
-                .checked-all {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                }
-
-                .item {
-                    position: relative;
-                    border-bottom: 1rpx solid #CCCCCC;
-                    width: 100%;
-                    height: 60rpx;
-                    line-height: 60rpx;
-                    text-align: center;
-
-                    .icon {
-                        position: absolute;
-                        top: 50%;
-                        right: 10rpx;
-                        transform: translateY(-30%);
-                    }
-
-                    &.checked {
-                        color: #2D8DFF;
-                    }
-
-                }
-            }
         }
+    }
+
+    .ws-options {
+        width: 100%;
+        max-height: 600rpx;
+        border-style: solid;
+        border-color: #888888;
+        border-width: 1px;
+        background-color: #ffffff;
+        overflow-y: auto;
+        overflow-x: auto;
+        position: absolute;
+        z-index: 1;
+        box-sizing: border-box;
     }
 }
 </style>
